@@ -1,0 +1,76 @@
+
+#importing libraries
+import pandas as pd
+messages=pd.read_csv("SMSSpamCollection",sep="\t",names=["label","message"])
+import re
+import nltk
+nltk.download("stopwords")
+from nltk.corpus import stopwords
+from nltk.stem.porter import PorterStemmer
+ps=PorterStemmer()
+corpus=[]
+for i in  range(len(messages)):
+    review=re.sub("[^a-zA-Z]"," ",messages["message"][i])
+    review=review.lower()
+    review=review.split()
+    review=[ps.stem(word) for word in review if not word in stopwords.words("english")]
+    review=" ".join(review)
+    corpus.append(review)
+
+#bag of words
+from sklearn.feature_extraction.text import CountVectorizer
+cv=CountVectorizer(max_features=2500)
+x=cv.fit_transform(corpus).toarray()
+y=pd.get_dummies(messages["label"])
+y=y.iloc[:,1].values
+print(type(y))
+
+#naive bayes
+from sklearn.model_selection import train_test_split
+X_train,X_test,Y_train,Y_test=train_test_split(x,y,test_size=0.2)
+from sklearn.naive_bayes import MultinomialNB
+model=MultinomialNB()
+model.fit(X_train,Y_train)
+model.score(X_train,Y_train)
+y_pred=model.predict(X_test)
+from sklearn.metrics import confusion_matrix
+con=confusion_matrix(Y_test,y_pred)
+model.score(X_test,Y_test)
+#score- 0.98385
+
+
+#decision tree
+from sklearn.tree import DecisionTreeClassifier
+tree=DecisionTreeClassifier(max_leaf_nodes=2000)
+tree.fit(X_train,Y_train)
+tree.score(X_train,Y_train)
+y_pret=tree.predict(X_test)
+cot=confusion_matrix(Y_test,y_pret)
+tree.score(X_test,Y_test)
+#score- 0.9695
+
+
+# logistic regression
+from sklearn.linear_model import LogisticRegression
+lg=LogisticRegression()
+lg.fit(X_train,Y_train)
+lg.score(X_train,Y_train)
+lp=lg.predict(X_test)
+lg.score(X_test,Y_test)
+#score - 0.9847
+
+from sklearn.tree import export_graphviz
+
+from sklearn.externals.six import StringIO  
+from IPython.display import Image  
+import pydotplus
+
+dot_data = StringIO()
+export_graphviz(tree, out_file=dot_data,  
+                filled=True, rounded=True,
+                special_characters=True,class_names=['0','1'])
+graph = pydotplus.graph_from_dot_data(dot_data.getvalue())  
+graph.write_png('spam.png')
+Image(graph.create_png())
+
+
